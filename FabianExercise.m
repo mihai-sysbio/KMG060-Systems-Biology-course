@@ -53,8 +53,8 @@ title('Principal Component Scatter Plot');
 legend(condStr)
 hold off
 
-%% 3. 
-normCountsStress  = normCounts(:,Htemp);
+%% 3. Differentia gene expression
+normCountsStress  = normCounts(:,LowpH);
 normCountsref     = normCounts(:,ref);
 tLocal = nbintest(normCountsref,normCountsStress,'VarianceLink','LocalRegression');
 padj = mafdr(tLocal.pValue,'BHFDR',true);
@@ -66,7 +66,7 @@ geneTable.Properties.RowNames      = Traw.GeneName;
 geneTable.Properties.VariableNames = {'Mean_Ref','Mean_Stress','Log2_FC','pVal','adjPVal'};
 
 x=geneTable.Log2_FC; y=geneTable.adjPVal;
-FClim=abs(x)>=2; adjlim=y<=0.001;y=-log10(geneTable.adjPVal);
+FClim=abs(x)>=2; adjlim=y<=0.01;y=-log10(geneTable.adjPVal);
 hold on
 scatter(x,y,30,'fill','black')
 
@@ -83,5 +83,18 @@ for i=1:length(x)
 end
 
 scatter(x,y,30,'fill','red')
+line([2 2],[0 60]); line([-2 -2],[0 60]); line([-6 6],-log10([0.01 0.01]));
+title('Volcano plot')
+xlabel('Log2 FC')
+ylabel('-log10(adjPValue)')
 hold off
 
+%% 4. 
+Desc=readtable('GeneDescriptions.csv'); %Get data as table
+Desc=table(Desc{:,1}, Desc{:,3}); %Remove abundant second column, we only want gene names (outerjoin) and description columns
+q=geneTable.Properties.RowNames; geneTable{:,6}=q; %Adds row names to 6th column for outerjoin
+geneTable = outerjoin(Desc,geneTable,'LeftKeys','Var1','RightKeys','Var6'); %Adds Gene Descriptions to Genetable
+geneTable = sortrows(geneTable,'adjPVal','ascend');
+geneTable.Var6=[]; %Removes abundand column (which was only used for the purpose of outerjoin)
+geneTable.Properties.VariableNames([1 2])={'Gene','Description'}; %Adds headers to Gene names and Description columns
+disp(geneTable(1:10,:))
